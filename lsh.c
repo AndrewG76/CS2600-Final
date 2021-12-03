@@ -53,7 +53,7 @@ char *lsh_read_line(void)
         //Read a character
         c = getchar();
 
-        //If we hit EOF, replace it with a null character and return.
+        //If we hit EOF, replace it with a null character and return
         if (c == EOF || c == '\n') {
             buffer[position] = '\0';
             return buffer;
@@ -62,8 +62,8 @@ char *lsh_read_line(void)
         }
         position++;
 
-        //If we have exceeded the buffer, reallocate/
-        if (position >= bufsize ) {
+        //If we have exceeded the buffer, reallocate
+        if (position >= bufsize) {
             bufsize += LSH_RL_BUFSIZE;
             buffer = realloc(buffer, bufsize);
             if (!buffer) {
@@ -126,7 +126,7 @@ int lsh_launch(char **args)
         //Parent process
         do {
             wpid = waitpid(pid, &status, WUNTRACED);
-        } while (!WIFEXITED(status) && !WIGSIGNALED(status));
+        } while (!WIFEXITED(status) && !WIFSIGNALED(status));
     }
 
     return 1;
@@ -178,7 +178,7 @@ int lsh_help(char **args)
     int i;
     printf("Andrew Gravino's LSH\n");
     printf("Type program names and arguments, and hit enter.\n");
-    printf("the following are built in:\n");
+    printf("The following are built in:\n");
 
     for (i = 0; i < lsh_num_builtins(); i++) {
         printf("  %s\n", builtin_str[i]);
