@@ -2,6 +2,12 @@
 //CS2600, Final Part 1
 //12-10-21
 
+#include <sys/wait.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
 int main(int argc, char **argv)
 {
     //Load config files, if any
@@ -165,4 +171,42 @@ int lsh_cd(char **args)
         }
     }
     return 1;
+}
+
+int lsh_help(char **args)
+{
+    int i;
+    printf("Andrew Gravino's LSH\n");
+    printf("Type program names and arguments, and hit enter.\n");
+    printf("the following are built in:\n");
+
+    for (i = 0; i < lsh_num_builtins(); i++) {
+        printf("  %s\n", builtin_str[i]);
+    }
+
+    printf("Use the man command for information on other programs.\n");
+    return 1;
+}
+
+int lsh_exit(char **args)
+{
+    return 0;
+}
+
+int lsh_execute(char **args)
+{
+    int i;
+
+    if (args[0] == NULL) {
+        //An empty command was entered.
+        return 1;
+    }
+
+    for (i = 0; i < lsh_num_builtins(); i++) {
+        if (strcmp(args[0], builtin_str[i]) == 0) {
+            return (*builtin_func[i])(args);
+        }
+    }
+
+    return lsh_launch(args);
 }
