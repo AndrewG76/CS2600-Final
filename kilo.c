@@ -2,6 +2,12 @@
 //CS2600, Final Part 2
 //12-10-21
 
+/*** includes ***/
+
+#define _DEFAULT_SOURCE
+#define _BSD_SOURCE
+#define _GNU_SOURCE
+
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
@@ -42,7 +48,7 @@ struct editorConfig {
     int screenrows;
     int screencols;
     int numrows;
-    erow row;
+    erow *row;
     struct termios orig_termios;
 };
 
@@ -149,7 +155,7 @@ int getCursorPosition(int *rows, int *cols) {
     return 0;
 }
 
-int getWindowSize( int *rows, int *cols) {
+int getWindowSize(int *rows, int *cols) {
     struct winsize ws;
 
     if(ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
@@ -162,17 +168,37 @@ int getWindowSize( int *rows, int *cols) {
     }
 }
 
+/*** row operations ***/
+
+void editorAppendRow(char *s, size_t len) {
+    E.row = realloc(E.row, sizeof(erow) * (E.numrows + 1));
+
+    int at = E.numrows;
+    E.row[at].size = len;
+    E.row[at].chars = malloc(len + 1);
+    memcpy(E.row[at].chars, s, len);
+    E.row[at].chars[len] = '\0';
+    E.numrows++;
+}
+
 /*** file i/o ***/
 
-void editorOpen() {
-    char *line = "Hello, world!";
-    ssize_t linelen = 13;
+void editorOpen(char *filename) {
+    FILE *fp = fopen(filename, "r");
+    if (!fp) die("fopen");
 
-    E.row.size = linelen;
-    E.row.chars = malloc(linelen + 1);
-    memcpy(E.row.chars, line, linelen);
-    E.row.chars[linelen] = '\0';
-    E.numrows = 1;
+    char *line = NULL;
+    size_t linecap = 0;
+    ssize_t linelen;
+    linelen = getline(&line, &linecap, fp);
+    if (linelen != -1) {
+        while (linelen > 0 && (line[linelen - 1] == '\n' ||
+                               line[linelen - 1] == '\r'))
+            linelen--;
+        editorAppendRow(line, linelen);
+    }
+    free(line);
+    fclose(fp);
 }
 
 
@@ -204,7 +230,7 @@ void editorDrawRows(struct abuf *ab) {
     int y;
     for (y = 0; y < E.screenrows; y++) {
         if (y >= E.numrows) {
-            if (y == E.screenrows / 3) {
+            if (E.numrows == 0 && y == E.screenrows / 3) {
                 char welcome[80];
                 int welcomelen = snprintf(welcome, sizeof(welcome),
                     "Kilo editor -- version %s", KILO_VERSION);
@@ -319,14 +345,17 @@ void initEditor() {
     E.cx = 0;
     E.cy = 0;
     E.numrows = 0;
+    E.row = NULL;
 
     if (getWindowSize(&E.screenrows, &E.screencols) == -1) die("getWindowSize");
 }
 
-int main() {
+int main(int argc, char *argv[]) {
     enableRawMode();
     initEditor();
-    editorOpen();
+    if (argc >= 2) {
+        editorOpen(argv[1]);
+    }
 
     while (1) {
         editorRefreshScreen();
