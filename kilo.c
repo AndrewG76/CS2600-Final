@@ -128,8 +128,6 @@ char *editorPrompt(char *prompt, void (*callback)(char *, int));
 
 /*** terminal ***/
 
-struct termios orig_termios;
-
 void die(const char *s) {
     write(STDOUT_FILENO, "\x1b[2J", 4);
     write(STDOUT_FILENO, "\x1b[H", 3);
@@ -195,7 +193,7 @@ int editorReadKey() {
                     case 'F': return END_KEY;
                 }
             }
-        } else if (seq[0] == '0') {
+        } else if (seq[0] == 'O') {
             switch (seq[1]) {
                 case 'H': return HOME_KEY;
                 case 'F': return END_KEY;
@@ -230,7 +228,7 @@ int getCursorPosition(int *rows, int *cols) {
 int getWindowSize(int *rows, int *cols) {
     struct winsize ws;
 
-    if(ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
         if (write(STDOUT_FILENO, "\x1b[999C\x1b[999B", 12) != 12) return -1;
         return getCursorPosition(rows, cols);
     } else {
