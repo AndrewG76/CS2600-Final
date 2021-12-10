@@ -3,6 +3,7 @@
 //12-10-21
 
 #include <sys/wait.h>
+#include <sys/types.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -71,7 +72,7 @@ int lsh_exit(char **args)
 
 int lsh_launch(char **args)
 {
-    pid_t pid, wpid;
+    pid_t pid;
     int status;
 
     pid = fork();
@@ -87,7 +88,7 @@ int lsh_launch(char **args)
     } else {
         //Parent process
         do {
-            wpid = waitpid(pid, &status, WUNTRACED);
+            waitpid(pid, &status, WUNTRACED);
         } while (!WIFEXITED(status) && !WIFSIGNALED(status));
     }
 
@@ -112,9 +113,22 @@ int lsh_execute(char **args)
     return lsh_launch(args);
 }
 
-#define LSH_RL_BUFSIZE 1024
 char *lsh_read_line(void)
 {
+#ifdef LSH_USE_STD_GETLINE
+    char *line = NULL;
+    ssize_t bufsize = 0; //Have getline allocate a buffer for us
+    if (getline(&line, &bufsize, stdin) == -1) {
+        if (feof(stdin)) {
+            exit(EXIT_SUCCESS); //We received an EOF
+        } else {
+            perror("lsh: getline\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+    return line;
+#else
+#define LSH_RL_BUFSIZE 1024
     int bufsize = LSH_RL_BUFSIZE;
     int position = 0;
     char *buffer = malloc(sizeof(char) * bufsize);
@@ -129,8 +143,9 @@ char *lsh_read_line(void)
         //Read a character
         c = getchar();
 
-        //If we hit EOF, replace it with a null character and return
-        if (c == EOF || c == '\n') {
+        if (c == EOF) {
+            exit(EXIT_SUCCESS);
+        } else if (c == '\n') {
             buffer[position] = '\0';
             return buffer;
         } else {
@@ -148,6 +163,7 @@ char *lsh_read_line(void)
             }
         }
     }
+#endif
 }
 
 #define LSH_TOK_BUFSIZE 64
