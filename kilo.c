@@ -376,7 +376,7 @@ void editorSelectSyntaxHighlight() {
     E.syntax = NULL;
     if (E.filename == NULL) return;
 
-    char *ext = strchr(E.filename, '.');
+    char *ext = strrchr(E.filename, '.');
 
     for (unsigned int j = 0; j < HLDB_ENTRIES; j++) {
         struct editorSyntax *s = &HLDB[j];
@@ -499,7 +499,7 @@ void editorRowInsertChar(erow *row, int at, int c) {
 }
 
 void editorRowAppendString(erow *row, char *s, size_t len) {
-    row-> chars = realloc(row->chars, row->size + len + 1);
+    row->chars = realloc(row->chars, row->size + len + 1);
     memcpy(&row->chars[row->size], s, len);
     row->size += len;
     row->chars[row->size] = '\0';
@@ -589,7 +589,6 @@ void editorOpen(char *filename) {
     char *line = NULL;
     size_t linecap = 0;
     ssize_t linelen;
-    linelen = getline(&line, &linecap, fp);
     while ((linelen = getline(&line, &linecap, fp)) != -1) {
         while (linelen > 0 && (line[linelen - 1] == '\n' ||
                                line[linelen - 1] == '\r'))
@@ -608,6 +607,7 @@ void editorSave() {
             editorSetStatusMessage("Save aborted");
             return;
         }
+        editorSelectSyntaxHighlight();
     }
 
     int len;
@@ -795,6 +795,7 @@ void editorDrawRows(struct abuf *ab) {
                 } else {
                     int color = editorSyntaxToColor(hl[j]);
                     if (color != current_color) {
+                        current_color = color;
                         char buf[16];
                         int clen = snprintf(buf, sizeof(buf), "\x1b[%dm", color);
                         abAppend(ab, buf, clen);
@@ -968,8 +969,8 @@ void editorProcessKeypress() {
                 quit_times--;
                 return;
             }
-            write(STDOUT_FILENO, "x1b[2J", 4);
-            write(STDOUT_FILENO, "\x1b{H", 3);
+            write(STDOUT_FILENO, "\x1b[2J", 4);
+            write(STDOUT_FILENO, "\x1b[H", 3);
             exit(0);
             break;
 
@@ -1060,7 +1061,7 @@ int main(int argc, char *argv[]) {
     }
 
     editorSetStatusMessage(
-        "HELP: CTRL-S = save | Ctrl-Q = quit | Ctrl-F = find");
+        "HELP: Ctrl-S = save | Ctrl-Q = quit | Ctrl-F = find");
 
     while (1) {
         editorRefreshScreen();
